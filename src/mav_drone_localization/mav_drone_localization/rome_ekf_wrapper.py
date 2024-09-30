@@ -5,7 +5,7 @@ from rclpy.node import Node
 import rclpy.time
 from std_msgs.msg import String, Float64
 from sensor_msgs.msg import FluidPressure, Temperature, NavSatFix
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped
 from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.srv import MessageInterval
 # from mavros_msgs.msg import 
@@ -16,56 +16,12 @@ from std_msgs.msg import Header
 from tf_transformations import quaternion_from_euler
 from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry
+import tf2_ros
+from scipy.spatial.transform import Rotation as R
+
 #region Consts
 ORIGIN_ALT_MSL=616.56
 #endregion Consts
-
-def yaw_ned_to_quaternion_msg_enu(yaw_degrees):
-    # Adjust yaw so that 0 degrees points North, but quaternion is in ENU frame
-    adjusted_yaw_degrees = 90.0 - yaw_degrees
-    
-    # Convert adjusted yaw from degrees to radians
-    yaw_radians = math.radians(adjusted_yaw_degrees)
-
-    # Create quaternion from Euler angles (roll, pitch, yaw)
-    # In ENU, roll (x-axis) and pitch (y-axis) are 0, and yaw (z-axis) is the rotation
-    q = quaternion_from_euler(0, 0, yaw_radians)
-
-    # Create and return a Quaternion ROS message
-    quaternion_msg = Quaternion()
-    quaternion_msg.x = q[0]
-    quaternion_msg.y = q[1]
-    quaternion_msg.z = q[2]
-    quaternion_msg.w = q[3]
-    
-    return quaternion_msg
-
-
-def calculate_altitude_and_variance(pressure_pa, temperature_c, pressure_variance, temperature_variance) -> list[float]:
-    # Constants
-    T0 = 288.15  # Standard temperature at sea level in Kelvin
-    L = 0.0065   # Temperature lapse rate in K/m
-    P0 = 101325  # Standard pressure at sea level in Pa
-    R = 8.31432  # Universal gas constant for air in J/(mol·K)
-    g = 9.80665  # Acceleration due to gravity in m/s²
-    M = 0.0289644  # Molar mass of Earth's air in kg/mol
-
-    # Convert temperature to Kelvin
-    temperature_k = temperature_c + 273.15
-
-    # Calculate exponent for the pressure ratio
-    exponent = (R * L) / (g * M)
-
-    # Calculate the altitude using the barometric formula
-    altitude = (temperature_k / L) * (1 - (pressure_pa / P0) ** exponent)
-
-    # Calculate partial derivatives
-    partial_h_P = (-temperature_k / L) * (pressure_pa / P0) ** exponent * (R * L) / (g * M) * (1 / pressure_pa)
-    partial_h_T =  (1 / L) * (1 - (pressure_pa / P0) ** exponent)
-    # Calculate altitude variance
-    altitude_variance = (partial_h_P ** 2 * pressure_variance) + (partial_h_T ** 2 * temperature_variance)
-
-    return altitude, altitude_variance
 
 class PreEkfTranslator(Node):
     def __init__(self):
@@ -90,6 +46,10 @@ class PreEkfTranslator(Node):
         self.declare_parameter('out_rate', 10)
         self.declare_parameter('ekf_origin_msg_interval_request_rate', 0.1)
         self.declare_parameter('ekf_origin_msg_rate', 0.1) # HZ
+        self.declare_parameter('odom_frame', 'odom')
+        self.declare_parameter('base_link_frame', 'base_link')
+        self.declare_parameter('base_link_stab_frame', 'base_link_stab')
+
 
         self.get_logger().warning(f"publishing alt with noise = {self.get_parameter('generated_alt_noise_std').value}")
 
@@ -106,6 +66,7 @@ class PreEkfTranslator(Node):
             self.odom_gz_callback,
             10
         )
+
         self.ekf_origin_sub = self.create_subscription(GeoPointStamped, '/mavros/global_position/gp_origin', self.ekf_origin_callback, qos_profile_sensor_data)
         # Publisher
         self.alt_publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, qos_profile_sensor_data)
@@ -120,20 +81,15 @@ class PreEkfTranslator(Node):
         # self.out_timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.process_and_republish)
         self.ekf_origin_set_msg_interval_timer = self.create_timer(self.get_parameter('ekf_origin_msg_interval_request_rate').value, self.set_msg_interval_ekf_origin_callback)
 
+        # TFs
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-    def heading_callback(self, msg: Float64):
-        self.get_logger().info(f'Received from heading: {msg.data}')
-        self.last_heading = msg.data
+        # TF Broadcaster
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-
-    def pressure_callback(self, msg: FluidPressure):
-        self.get_logger().info(f'Received from pressure: {msg.fluid_pressure}')
-        self.last_pressure = msg.fluid_pressure
-        self.last_pres_header = msg.header
-
-    def temp_callback(self, msg: Temperature):
-        self.get_logger().info(f'Received from temp: {msg.temperature}')
-        self.last_temp = msg.temperature
+        # Timer to publish the new TF
+        self.timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.publish_local_body_tf)
 
     def global_position_local_callback(self, msg: Odometry):
         # TODO: this alt is relative to HOME. get current home alt and republish relative to the EKF_ORIGIN
@@ -154,44 +110,6 @@ class PreEkfTranslator(Node):
 
         self.odom_publisher.publish(msg)
 
-    def process_and_republish(self):
-        # Simple example of processing: concatenate the string from topic1 with the float from topic2
-        if not self.last_heading or not self.last_pressure or not self.last_temp or not self.last_pres_header:
-            self.get_logger().info(f'hdg_and_alt output NOT Published')
-            return
-        
-        pressure_var = self.get_parameter('pressure_cov').value
-        temp_var = self.get_parameter('temp_cov').value
-        alt_amsl, alt_var = calculate_altitude_and_variance(self.last_pressure, self.last_temp, pressure_var, temp_var)
-        self.get_logger().info(f"{alt_amsl, alt_var=}")
-
-        if self.last_published_header:
-            if self.last_pres_header.stamp.nanosec == self.last_published_header.stamp.nanosec:
-                self.get_logger().warning("same timestamp")
-                return
-
-        # Republish the processed data
-        output_msg = PoseWithCovarianceStamped()
-        output_msg.header = self.last_pres_header
-        output_msg.header.frame_id = 'odom'
-        output_msg.pose.pose.orientation = yaw_ned_to_quaternion_msg_enu(self.last_heading)
-        output_msg.pose.covariance[35] = self.get_parameter('heading_cov').value # for yaw, in radians
-
-        noise = float(np.random.normal(0,self.get_parameter('generated_alt_noise_std').value,1))
-        if not self.ekf_origin:
-            return
-        else:
-            origin_height = float(self.ekf_origin.position.altitude)
-            self.get_logger().info(f"{origin_height=}")
-
-        output_msg.pose.pose.position.z = 1.13*alt_amsl - origin_height # + noise
-        output_msg.pose.covariance[14] = alt_var 
-        self.publisher.publish(output_msg)
-        
-        self.last_published_header = self.last_pres_header
-        
-        self.get_logger().info(f'Published: "{output_msg}"')
-
     def set_msg_interval_ekf_origin_callback(self):
         req = MessageInterval.Request()
         req.message_id = 49
@@ -206,6 +124,55 @@ class PreEkfTranslator(Node):
         self.set_datum_client.call_async(req)
         self.get_logger().error("end call")
         self.ekf_origin = msg
+
+    def publish_local_body_tf(self):
+        try:
+            # Get the original transform
+            trans = self.tf_buffer.lookup_transform(self.get_parameter('odom_frame').value, self.get_parameter('base_link_frame').value, rclpy.time.Time())
+            original_rotation = trans.transform.rotation
+            
+            # Extract the quaternion from the original transform
+            original_quat = [
+                original_rotation.x,
+                original_rotation.y,
+                original_rotation.z,
+                original_rotation.w
+            ]
+
+            # Convert the quaternion to Euler angles
+            original_rotation = R.from_quat(original_quat)
+            euler = original_rotation.as_euler('xyz')
+
+            # Extract the yaw
+            roll, pitch, yaw = euler
+
+            # Create a new quaternion with the same yaw but zero roll and pitch
+            new_rotation = R.from_euler('xyz', [-roll, -pitch, 0.0])
+            new_quat = new_rotation.as_quat()
+
+            # Create a new transform
+            new_transform = TransformStamped()
+            new_transform.header.stamp = self.get_clock().now().to_msg()
+            new_transform.header.frame_id = self.get_parameter('base_link_frame').value  # Make the original transform the parent
+            new_transform.child_frame_id = self.get_parameter('base_link_stab_frame').value      # Name for the new frame
+
+            # Set the translation (keeping the same position but setting z to 0)
+            new_transform.transform.translation.x = 0.0      # Adjust as needed
+            new_transform.transform.translation.y = 0.0      # Adjust as needed
+            new_transform.transform.translation.z = 0.0      # Set Z to 0 for parallel to ground
+            
+            # Set the rotation to the new quaternion
+            new_transform.transform.rotation.x = new_quat[0]
+            new_transform.transform.rotation.y = new_quat[1]
+            new_transform.transform.rotation.z = new_quat[2]
+            new_transform.transform.rotation.w = new_quat[3]
+
+            self.get_logger().error(str(new_transform))
+            # Publish the new transform
+            self.tf_broadcaster.sendTransform(new_transform)
+
+        except Exception as e:
+            self.get_logger().error(f"Could not get transform: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

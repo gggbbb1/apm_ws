@@ -1,5 +1,7 @@
 <launch>
-    <node name="rome_ekf_wrapper" exec="rome_ekf_wrapper" pkg="mav_drone_localization" args="--ros-args --log-level warn"/>
+    <node name="rome_ekf_wrapper" exec="rome_ekf_wrapper" pkg="mav_drone_localization" args="--ros-args --log-level warn">
+        <param name="use_sim_time" value="true" />
+    </node>
     <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node_odom">
         <param from="$(find-pkg-share mav_drone_localization)/config/ekf_mav_with_gps.yaml"/>
         <remap from="/odometry/filtered" to="/odometry/filtered/local"/>
