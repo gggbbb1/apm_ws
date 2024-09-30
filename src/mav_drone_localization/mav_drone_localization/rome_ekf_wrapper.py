@@ -8,6 +8,7 @@ from sensor_msgs.msg import FluidPressure, Temperature, NavSatFix
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.srv import MessageInterval
+# from mavros_msgs.msg import 
 from robot_localization.srv import SetDatum
 import math
 from geometry_msgs.msg import Quaternion
@@ -92,23 +93,10 @@ class PreEkfTranslator(Node):
 
         self.get_logger().warning(f"publishing alt with noise = {self.get_parameter('generated_alt_noise_std').value}")
 
-        # Subscribers
         self.subscription1 = self.create_subscription(
-            Float64,
-            self.get_parameter('heading_topic').value,
-            self.heading_callback,
-            qos_profile_sensor_data
-        )
-        self.subscription2 = self.create_subscription(
-            FluidPressure,
-            self.get_parameter('pressure_topic').value,
-            self.pressure_callback,
-            qos_profile_sensor_data
-        )
-        self.subscription3 = self.create_subscription(
-            Temperature,
-            self.get_parameter('temp_topic').value,
-            self.temp_callback,
+            Odometry, 
+            '/mavros/global_position/local',
+            self.global_position_local_callback,
             qos_profile_sensor_data
         )
 
@@ -120,7 +108,7 @@ class PreEkfTranslator(Node):
         )
         self.ekf_origin_sub = self.create_subscription(GeoPointStamped, '/mavros/global_position/gp_origin', self.ekf_origin_callback, qos_profile_sensor_data)
         # Publisher
-        self.publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, qos_profile_sensor_data)
+        self.alt_publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, qos_profile_sensor_data)
         self.odom_publisher = self.create_publisher(Odometry, '/odometry/gazebo', 10)
         self.gps_publisher = self.create_publisher(NavSatFix, '/gps/fix', qos_profile_sensor_data)
 
@@ -129,8 +117,9 @@ class PreEkfTranslator(Node):
         self.set_datum_client = self.create_client(SetDatum, '/navsat_transform/set_datum')
 
         # Timer to operate:
-        self.out_timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.process_and_republish)
+        # self.out_timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.process_and_republish)
         self.ekf_origin_set_msg_interval_timer = self.create_timer(self.get_parameter('ekf_origin_msg_interval_request_rate').value, self.set_msg_interval_ekf_origin_callback)
+
 
     def heading_callback(self, msg: Float64):
         self.get_logger().info(f'Received from heading: {msg.data}')
@@ -145,6 +134,15 @@ class PreEkfTranslator(Node):
     def temp_callback(self, msg: Temperature):
         self.get_logger().info(f'Received from temp: {msg.temperature}')
         self.last_temp = msg.temperature
+
+    def global_position_local_callback(self, msg: Odometry):
+        # TODO: this alt is relative to HOME. get current home alt and republish relative to the EKF_ORIGIN
+        pose_for_alt = PoseWithCovarianceStamped()
+        pose_for_alt.header = msg.header
+        pose_for_alt.header.frame_id = 'map'
+        pose_for_alt.pose.pose.position.z = msg.pose.pose.position.z
+        pose_for_alt.pose.covariance[14] = 1.0
+        self.alt_publisher.publish(pose_for_alt)
 
     def odom_gz_callback(self, msg: Odometry):
         self.get_logger().info(f'Received from odom')

@@ -8,3 +8,4 @@
 /optical_flow/twist_with_cov
 /mavros/global_position/gp_origin
 /mavros/global_position/raw/fix
+/mavros/global_position/local
