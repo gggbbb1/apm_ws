@@ -12,3 +12,5 @@ archives
 patches
 callgrind*
 */apm_gazebo/bin/*
+*plots*
+*rosbag*
