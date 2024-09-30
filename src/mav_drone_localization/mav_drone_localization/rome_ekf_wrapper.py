@@ -47,6 +47,7 @@ class PreEkfTranslator(Node):
         self.declare_parameter('ekf_origin_msg_interval_request_rate', 0.1)
         self.declare_parameter('ekf_origin_msg_rate', 0.1) # HZ
         self.declare_parameter('odom_frame', 'odom')
+        self.declare_parameter('map_frame', 'map')
         self.declare_parameter('base_link_frame', 'base_link')
         self.declare_parameter('base_link_stab_frame', 'base_link_stab')
 
@@ -128,7 +129,7 @@ class PreEkfTranslator(Node):
     def publish_local_body_tf(self):
         try:
             # Get the original transform
-            trans = self.tf_buffer.lookup_transform(self.get_parameter('odom_frame').value, self.get_parameter('base_link_frame').value, rclpy.time.Time())
+            trans = self.tf_buffer.lookup_transform(self.get_parameter('map_frame').value, self.get_parameter('base_link_frame').value, rclpy.time.Time())
             original_rotation = trans.transform.rotation
             
             # Extract the quaternion from the original transform
@@ -147,25 +148,27 @@ class PreEkfTranslator(Node):
             roll, pitch, yaw = euler
 
             # Create a new quaternion with the same yaw but zero roll and pitch
-            new_rotation = R.from_euler('xyz', [-roll, -pitch, 0.0])
-            new_quat = new_rotation.as_quat()
+            new_rotation_from_odom = R.from_euler('xyz', [0, 0, yaw])
+            quat_from_odom = new_rotation_from_odom.as_quat()
+            rotation_diff =  original_rotation * new_rotation_from_odom.inv()
+
+            new_quat = rotation_diff.as_quat()
 
             # Create a new transform
             new_transform = TransformStamped()
             new_transform.header.stamp = self.get_clock().now().to_msg()
-            new_transform.header.frame_id = self.get_parameter('base_link_frame').value  # Make the original transform the parent
+            new_transform.header.frame_id = self.get_parameter('map_frame').value  # Make the original transform the parent
             new_transform.child_frame_id = self.get_parameter('base_link_stab_frame').value      # Name for the new frame
 
             # Set the translation (keeping the same position but setting z to 0)
-            new_transform.transform.translation.x = 0.0      # Adjust as needed
-            new_transform.transform.translation.y = 0.0      # Adjust as needed
-            new_transform.transform.translation.z = 0.0      # Set Z to 0 for parallel to ground
+            new_transform.transform.translation = trans.transform.translation      # Adjust as needed
+
             
             # Set the rotation to the new quaternion
-            new_transform.transform.rotation.x = new_quat[0]
-            new_transform.transform.rotation.y = new_quat[1]
-            new_transform.transform.rotation.z = new_quat[2]
-            new_transform.transform.rotation.w = new_quat[3]
+            new_transform.transform.rotation.x = quat_from_odom[0]
+            new_transform.transform.rotation.y = quat_from_odom[1]
+            new_transform.transform.rotation.z = quat_from_odom[2]
+            new_transform.transform.rotation.w = quat_from_odom[3]
 
             self.get_logger().error(str(new_transform))
             # Publish the new transform
