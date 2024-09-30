@@ -4,7 +4,7 @@ There are many.
 ### ekf.yaml (input for ekf_localization_node)
 * ```smoothed_lagged_data``` - if i have sensor that is lagged, and will come later with a timestamp from before. (like: high CPU process)
 * ```history_length``` - buffer length of the previous settings
-* ```base_link_output_frame``` - what frame the output should be in.
+* ```base_link_output_frame``` - what frame the output should be in. **BUT** it's the wrong parameter name! --> **base_link_frame_output**
 ### apm_config
 * something cool = **target_position** ----> enable tf.listen between baselink and target position.
     same as target_attitude
@@ -16,7 +16,6 @@ There are many.
 * exposes services about ```FromLL and ToLL``` - takes lat lon to map and vice versa.
 
 ## important points:
-- the sensor msgs ariving **cant be with the same timestamp!!!!!**. the delta between msgs is a divider and therefore all of the data explodes.
 - to get higher stream of mavlink msgs, the QGC/MP is fighting against you. need to enter application settings and set - ```[V] all values are set from vehicle params``` - set parameters: SR0_*
 - the ```reject...``` parameters are defalut to ```double::max()``` if unspecified
 - in the risetime of the ardupilot, the temperature builds until its stable. ~30 sec.
@@ -61,6 +60,14 @@ def geoid_height(lat, lon):
     """
     return _egm96.height(lat, lon)
 ```
+
+## Altitude
+- after checking, there is a solid value of altitude in the ```GLOBAL_POSITION_INT``` msg. it is in the ```relative altitude``` field.
+- this field is measured with respect to the ```HOME_POSITION```.
+- the strength of the datum in it is from the fact that they have a "fallback" to the barometer altitude if the normal GPS, LLA positioning systems arent working.
+- it was checked by me when flying in ALT_HOLD without any GPS connected.
+- that means: for now in simulation: take this height. later - TODO: substruct the HOME_POSITION altitude from it to get the alt in compare to EKF_ORIGIN.
+
 ## ROSBAG
 - there are 2 scripts in the package:
 1. record_bag.sh - takes the topic list from ```pkg/config``` and records a bag file to ```pkg/rosbag``` directory. the name is the current time.
