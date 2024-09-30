@@ -1,0 +1,31 @@
+/mavros/**:
+  ros__parameters:
+    # plugin_denylist:
+    #   # common
+    #   - actuator_control
+    #   - ftp
+    #   - hil
+    #   # extras
+    #   - altitude
+    #   - debug_value
+    #   - image_pub
+    #   - px4flow
+    #   - vibration
+    #   - vision_speed_estimate
+    #   - wheel_odometry
+
+    plugin_allowlist:
+      - 'sys_status'
+      # - 'sys_time'
+      - 'command'
+      - 'do_set_mode'
+      - 'imu'
+      - 'global_position'
+      - 'param'
+      - 'setpoint_attitude'
+      - 'setpoint_raw'
+      - 'gimbal_control'
+      - 'vfr_hud'
+      - 'local_position'
+      - 'global_position'
+      - 'altitude'

@@ -1,0 +1,9 @@
+CAMERA_OPTICAL_FRAME = 'camera_link_optical'
+CAMERA_LINK_FRAME = 'camera_link'
+OBJECT_FRAME = 'detected_object'
+CAMERA_TOPIC = "/gimbal_camera/image_raw"
+CAMERA_ODOM_TOPIC = "/odom/camera_link_optical"
+CAMERA_PHYSICAL_ODOM_TOPIC = "/odom/fake_camera_link"
+YAW_P = -0.12
+YAW_I = 0.0 #-0.03
+YAW_D = -0.1

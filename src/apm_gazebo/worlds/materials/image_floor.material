@@ -1,0 +1,14 @@
+material Custom/ImagePlane
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            texture_unit
+            {
+                texture map.jpg
+            }
+        }
+    }
+}

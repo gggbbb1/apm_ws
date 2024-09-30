@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="my_gimbal_3d">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-1.1249E-17 5.3962E-18 -0.0045389"
+        rpy="0 0 0" />
+      <mass
+        value="0.078458" />
+      <inertia
+        ixx="3.1364E-05"
+        ixy="2.356E-21"
+        ixz="1.6956E-21"
+        iyy="3.1364E-05"
+        iyz="1.4274E-21"
+        izz="5.8255E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="1st_link">
+    <inertial>
+      <origin
+        xyz="1.2314E-16 -0.036892 -0.016252"
+        rpy="0 0 0" />
+      <mass
+        value="0.14774" />
+      <inertia
+        ixx="0.00016878"
+        ixy="2.5966E-21"
+        ixz="2.3862E-21"
+        iyy="7.3688E-05"
+        iyz="-6.9072E-05"
+        izz="0.00011514" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/1st_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/1st_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="pan"
+    type="revolute">
+    <origin
+      xyz="0 0 -0.005"
+      rpy="1.5708 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="1st_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-0.7854"
+      upper="0.7854"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="2nd_link">
+    <inertial>
+      <origin
+        xyz="-0.022016 0 0.0019119"
+        rpy="0 0 0" />
+      <mass
+        value="0.065317" />
+      <inertia
+        ixx="2.614E-05"
+        ixy="1.2607E-22"
+        ixz="1.2241E-05"
+        iyy="3.501E-05"
+        iyz="1.3965E-22"
+        izz="1.5317E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/2nd_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/2nd_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="roll"
+    type="revolute">
+    <origin
+      xyz="0 -0.07165 0"
+      rpy="0 0 0" />
+    <parent
+      link="1st_link" />
+    <child
+      link="2nd_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.7854"
+      upper="0.7854"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="camera">
+    <inertial>
+      <origin
+        xyz="0.0091921 -0.00078771 -0.0014335"
+        rpy="0 0 0" />
+      <mass
+        value="0.23523" />
+      <inertia
+        ixx="7.527E-05"
+        ixy="6.9626E-07"
+        ixz="6.3053E-07"
+        iyy="8.0649E-05"
+        iyz="7.1378E-07"
+        izz="6.9991E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/camera.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://my_gimbal_3d/meshes/camera.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="tilt"
+    type="revolute">
+    <origin
+      xyz="0 0 0.01595"
+      rpy="0 0 0" />
+    <parent
+      link="2nd_link" />
+    <child
+      link="camera" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-2.3562"
+      upper="0.7854"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

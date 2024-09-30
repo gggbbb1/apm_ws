@@ -1,0 +1,28 @@
+session_name: apm
+windows:
+  - window_name: sim
+    layout: tiled
+    suppress_history: false
+    shell_command_before:
+      - source /opt/ros/humble/setup.bash
+      - cd /workspaces/apm_24_9
+      - source install/setup.bash
+      - export BRINGUP=/workspaces/apm_24_9/src/apm_bringup
+    panes:
+      - shell_command: # gazebo
+          - printf '\033]2;GAZEBO\033\\'
+          - killall -s 9 gzserver
+          - killall -s 9 gzclient
+          - ros2 launch apm_bringup sim.launch.py
+      - shell_command: # sitl
+          - printf '\033]2;SITL\033\\'
+          - sleep 1
+          - ${BRINGUP}/bin/arducopter  -S --model gazebo --speedup 1 --defaults ${BRINGUP}/config/copter.parm  -I0 --home 32.219678626995474,34.92175414579354,100.0,0.0
+      # - shell_command: # MAVProxy
+      #     - printf '\033]2;mavproxyL\033\\'
+      #     - export PYTHONPATH=/home/user/.local/lib/python3.10/site-packages/
+      #     - mavproxy.py --master tcp:127.0.0.1:5760 --console --out udp:127.0.0.1:14550 --load-module=gimbal
+      - shell_command: # mavros
+          - printf '\033]2;mavros\033\\'
+          - sleep 2
+          - ros2 launch apm_bringup mavros.launch

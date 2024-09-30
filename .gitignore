@@ -1,0 +1,14 @@
+build/
+install/
+log/
+logs/
+terrain/
+eeprom.bin
+src/rome_gazebo/bin
+mav.parm
+mav.tlog*
+*.pyc
+archives
+patches
+callgrind*
+*/apm_gazebo/bin/*

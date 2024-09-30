@@ -1,0 +1,6 @@
+<!-- rviz.launch -->
+<launch>
+    <!-- Launch RViz with specified configuration file -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find of_poc)/rviz/of.rviz" />
+  </launch>
+  

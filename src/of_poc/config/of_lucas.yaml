@@ -1,0 +1,11 @@
+/**/of_lucas_node:
+  ros__parameters:
+    use_sim_time: true
+    debug_mode: true
+    min_features_in_frame: 30
+    max_features_in_frame: 500
+    min_dist_between_features: 5
+    lk_quality_level: 0.5
+    segment_amount_x: 3
+    segment_amount_y: 3
+    min_interval_to_compute: 0.001

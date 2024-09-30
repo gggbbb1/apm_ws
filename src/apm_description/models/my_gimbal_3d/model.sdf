@@ -1,0 +1,221 @@
+<sdf version='1.7'>
+  <model name='my_gimbal_3d'>
+    <link name='base_link'>
+      <inertial>
+        <pose>-0 0 -0.004539 0 -0 0</pose>
+        <mass>0.078458</mass>
+        <inertia>
+          <ixx>3.1364e-05</ixx>
+          <ixy>2.356e-21</ixy>
+          <ixz>1.6956e-21</ixz>
+          <iyy>3.1364e-05</iyy>
+          <iyz>1.4274e-21</iyz>
+          <izz>5.8255e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='base_link_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/base_link.STL</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='base_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/base_link.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='pan' type='revolute'>
+      <pose relative_to='base_link'>0 0 -0.005 1.5708 -0 0</pose>
+      <parent>base_link</parent>
+      <child>1st_link</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1.575</lower>
+          <upper>1.575</upper>
+          <!-- <effort>0</effort>
+          <velocity>0</velocity> -->
+        </limit>
+        <dynamics>
+          <damping>0.2</damping>
+          <friction>0.00</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='1st_link'>
+      <pose relative_to='pan'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 -0.036892 -0.016252 0 -0 0</pose>
+        <mass>0.14774</mass>
+        <inertia>
+          <ixx>0.00016878</ixx>
+          <ixy>2.5966e-21</ixy>
+          <ixz>2.3862e-21</ixz>
+          <iyy>7.3688e-05</iyy>
+          <iyz>-6.9072e-05</iyz>
+          <izz>0.00011514</izz>
+        </inertia>
+      </inertial>
+      <collision name='1st_link_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/1st_link.STL</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='1st_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/1st_link.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='roll' type='revolute'>
+      <pose relative_to='1st_link'>0 -0.07165 0 0 0 0</pose>
+      <parent>1st_link</parent>
+      <child>2nd_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-0.7854</lower>
+          <upper>0.7854</upper>
+          <!-- <effort>0</effort>
+          <velocity>0</velocity> -->
+        </limit>
+        <dynamics>
+          <damping>0.001</damping>
+          <friction>0.00</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='2nd_link'>
+      <pose relative_to='roll'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.022016 0 0.001912 0 -0 0</pose>
+        <mass>0.065317</mass>
+        <inertia>
+          <ixx>2.614e-05</ixx>
+          <ixy>1.2607e-22</ixy>
+          <ixz>1.2241e-05</ixz>
+          <iyy>3.501e-05</iyy>
+          <iyz>1.3965e-22</iyz>
+          <izz>1.5317e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='2nd_link_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/2nd_link.STL</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='2nd_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/2nd_link.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <sensor name="roll_camera_imu" type="imu">
+        <pose relative_to="2nd_link">0 0 0 -1.575 -1.575 0</pose>
+        <always_on>1</always_on>
+      </sensor>
+    </link>
+    <joint name='tilt' type='revolute'>
+      <pose relative_to='2nd_link'>0 0 0.01595 0 0 0</pose>
+      <parent>2nd_link</parent>
+      <child>camera_link</child>
+      <axis>
+        <xyz>1 0 0</xyz>
+        <limit>
+          <lower>-0.7854</lower>
+          <upper>2.3562</upper>
+          <!-- <effort>0</effort>
+          <velocity>0</velocity> -->
+        </limit>
+        <dynamics>
+          <damping>0.001</damping>
+          <friction>0.00</friction>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='camera_link'>
+      <pose relative_to='tilt'>0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0.009192 -0.000788 -0.001434 0 0 0</pose>
+        <mass>0.23523</mass>
+        <inertia>
+          <ixx>7.527e-05</ixx>
+          <ixy>6.9626e-07</ixy>
+          <ixz>6.3053e-07</ixz>
+          <iyy>8.0649e-05</iyy>
+          <iyz>7.1378e-07</iyz>
+          <izz>6.9991e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name='camera_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/camera.STL</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='camera_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://my_gimbal_3d/meshes/camera.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <!-- <sensor name="camera" type="camera">
+        <pose>0.01 0 0 -1.575 -1.575 0</pose>
+        <camera>
+          <horizontal_fov>2.0</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>15000</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+      </sensor> -->
+      <sensor name="pitch_camera_imu" type="imu">
+        <pose relative_to="camera_link">0 0 0 -1.575 0 0</pose>
+        <always_on>1</always_on>
+      </sensor>
+    </link>
+    <plugin name="gimbal_control" filename="libGimbalControllerPlugin.so" />
+  </model>
+</sdf>

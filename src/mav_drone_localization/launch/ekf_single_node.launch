@@ -1,0 +1,8 @@
+<launch>
+    <node name="rome_ekf_wrapper" exec="rome_ekf_wrapper" pkg="mav_drone_localization" args="--ros-args --log-level WARN"/>
+    <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node">
+        <param from="$(find-pkg-share mav_drone_localization)/config/ekf_mav_simple.yaml"/>
+        <!-- <remap from="/odom" to="/odom"/> -->
+    </node>
+    <!-- <node name="rviz2" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share mav_drone_localization)/config/turtle.rviz" /> -->
+</launch>

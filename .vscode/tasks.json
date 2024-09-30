@@ -1,0 +1,55 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        
+        {
+            "label": "colcon package",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "statusbar": {
+                    "color": "#d66722"
+                },
+            },
+            "command": "colcon build --symlink-install --merge-install --packages-select ${input:package_name}",
+            "problemMatcher": []
+        },
+        {
+            "label": "colcon clean package",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "statusbar": {
+                    "color": "#d66722"
+                },
+            },
+            "command": "colcon clean packages --packages-select ${input:package_name} -y",
+            "problemMatcher": []
+        },
+        {
+            "label": "colcon build all",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "command": "colcon build --symlink-install --merge-install",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        
+        {
+            "id": "package_name",
+            "description": "package_name",
+            "options": [
+                "apm_application",
+                "apm_description",
+                "apm_bringup",
+                "apm_gazebo",
+                "of_poc",
+                "mav_drone_localization"
+            ],
+            "type": "pickString"
+        },
+    ]
+}

@@ -1,0 +1,8 @@
+<launch>
+    <include file="$(find-pkg-share mav_drone_localization)/launch/ekf.launch"/>
+    <node name="bag" exec="record_bag.sj" pkg="mav_drone_localization" args="-d $(find-pkg-share mav_drone_localization)/config/turtle.rviz ">
+        <remap from="/odom1" to="/odometry/filtered"/>
+        <remap from="/odom2" to="/odom/base_link"/>
+        <!-- <param name='result_path_name' value=(var 'result_pdf_name')/> -->
+    </node>
+</launch>

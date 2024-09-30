@@ -1,0 +1,52 @@
+{
+    "name": "apm_24_9",
+    "workspaceFolder": "/workspaces/apm_24_9",
+    "build": {
+        "context": "..",
+        "dockerfile": "Dockerfile"
+    },
+    // "image": "apm:24_9",
+    "remoteUser": "user",
+    "runArgs": [
+        "--name=apm_24_9",
+        "--hostname=apm_24_9",
+        "--privileged",
+        "--network=host",
+        "--device=/dev/dri:/dev/dri",
+        "--device=/dev/dri/renderD128:/dev/dri/renderD128",
+    ],
+    "containerEnv": {
+        "DISPLAY": "unix:0",
+        "QT_X11_NO_MITSHM": "1",
+        "PS1": "🐳  \\[\\033[1;36m\\]\\h \\[\\033[1;34m\\]\\W\\[\\033[0;35m\\] \\[\\033[1;36m\\]# \\[\\033[0m\\]"
+    },
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "twxs.cmake",
+                "albert.tabout",
+                "redhat.vscode-xml",
+                "ms-python.python",
+                "redhat.vscode-yaml",
+                "actboy168.tasks",
+                "shd101wyy.markdown-preview-enhanced",
+                "wayou.vscode-todo-highlight",
+                "streetsidesoftware.code-spell-checker",
+                "nonanonno.vscode-ros2",
+                "ms-python.black-formatter",
+                "ms-python.isort",
+                "Gruntfuggly.todo-tree",
+                "rioj7.vscode-file-templates",
+                "rioj7.command-variable",
+                "mhutchie.git-graph"
+            ],
+            "settings": {
+                "remote.autoForwardPorts": false
+            }
+        }
+    }
+}

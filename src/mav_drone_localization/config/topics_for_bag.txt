@@ -1,0 +1,10 @@
+/mavros/imu/data
+/mavros/global_position/compass_hdg
+/mavros/vfr_hud
+/clock
+/odom/base_link
+/mavros/imu/static_pressure
+/mavros/imu/temperature_baro
+/optical_flow/twist_with_cov
+/mavros/global_position/gp_origin
+/mavros/global_position/raw/fix
