@@ -58,20 +58,11 @@ class OdometryPlotter(Node):
             timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
             pos1 = (msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z)
             orientation1 = self.euler_from_quaternion(msg.pose.pose.orientation)
-            vel1 = (msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z,
-                    msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z)
-            self.odom1_data.append((timestamp, pos1, orientation1, vel1))
-
-    def odom2_callback(self, msg: Odometry):
-        if time.time() - self.start_time > self.get_parameter('delay').value:
-            timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
-            pos2 = (msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z)
-            orientation2 = self.euler_from_quaternion(msg.pose.pose.orientation)
-            # vel2 = (msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z,
+            # vel1 = (msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z,
             #         msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z)
             # transform velocity from map to body:
             try:
-                current_transform = self.tf_buffer.lookup_transform('base_link', 'map', rclpy.time.Time())
+                current_transform = self.tf_buffer.lookup_transform('map', msg.child_frame_id, rclpy.time.Time())
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error(f"Failed to lookup transform: {e}")
                 return
@@ -87,25 +78,36 @@ class OdometryPlotter(Node):
             vec_lin_trans = tf2_geometry_msgs.do_transform_vector3(lin_vel, current_transform)
             self.get_logger().error(f"{vec_lin_trans}")
             vec_ang_trans = tf2_geometry_msgs.do_transform_vector3(ang_vel, current_transform)
-            vel2 = (vec_lin_trans.vector.x, vec_lin_trans.vector.y, vec_lin_trans.vector.z, vec_ang_trans.vector.x, vec_ang_trans.vector.y, vec_ang_trans.vector.z)
+            vel1 = (vec_lin_trans.vector.x, vec_lin_trans.vector.y, vec_lin_trans.vector.z, vec_ang_trans.vector.x, vec_ang_trans.vector.y, vec_ang_trans.vector.z)
+            self.odom1_data.append((timestamp, pos1, orientation1, vel1))
+
+    def odom2_callback(self, msg: Odometry):
+        if time.time() - self.start_time > self.get_parameter('delay').value:
+            timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
+            pos2 = (msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z)
+            orientation2 = self.euler_from_quaternion(msg.pose.pose.orientation)
+            vel2 = (msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z,
+                    msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z)
+            
             self.odom2_data.append((timestamp, pos2, orientation2, vel2))
 
     def twist_callback(self, msg: TwistWithCovarianceStamped):
         if time.time() - self.start_time > self.get_parameter('delay').value:
             timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
-            try:
-                current_transform = self.tf_buffer.lookup_transform('base_link', 'map', rclpy.time.Time())
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-                self.get_logger().error(f"Failed to lookup transform: {e}")
-                return
-            lin_vel = Vector3Stamped()
-            lin_vel.vector.x = msg.twist.twist.linear.x
-            lin_vel.vector.y = msg.twist.twist.linear.y
-            lin_vel.vector.z = msg.twist.twist.linear.z
+            # try:
+            #     current_transform = self.tf_buffer.lookup_transform('base_link', 'map', rclpy.time.Time())
+            # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            #     self.get_logger().error(f"Failed to lookup transform: {e}")
+            #     return
+            # lin_vel = Vector3Stamped()
+            # lin_vel.vector.x = msg.twist.twist.linear.x
+            # lin_vel.vector.y = msg.twist.twist.linear.y
+            # lin_vel.vector.z = msg.twist.twist.linear.z
             
-            vec_lin_trans = tf2_geometry_msgs.do_transform_vector3(lin_vel, current_transform)
+            # vec_lin_trans = tf2_geometry_msgs.do_transform_vector3(lin_vel, current_transform)
             
-            vel = (vec_lin_trans.vector.x, vec_lin_trans.vector.y)
+            # vel = (vec_lin_trans.vector.x, vec_lin_trans.vector.y)
+            vel = (msg.twist.twist.linear.x, msg.twist.twist.linear.y)
             self.twist_data.append((timestamp, vel))
 
     def euler_from_quaternion(self, orientation):
