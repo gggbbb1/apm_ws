@@ -25,4 +25,4 @@ windows:
       - shell_command: # mavros
           - printf '\033]2;mavros\033\\'
           - sleep 2
-          - ros2 launch apm_bringup mavros.launch
+          - ros2 launch apm_bringup mavros.launch respawn_mavros:=true
