@@ -88,9 +88,26 @@ class PreEkfTranslator(Node):
 
         # TF Broadcaster
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        self.static_broadcaster = tf2_ros.StaticTransformBroadcaster(self)
+        self.publish_odom_map_static_tf()
 
         # Timer to publish the new TF
         self.timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.publish_local_body_tf)
+
+    def publish_odom_map_static_tf(self):
+        """
+            Publish the static tf between odom and map, that is 0 (same frame)
+            that will alow the data from all the sensors to come in map/odom frame without any difference
+        """
+        # Define the static transform
+        static_transform = TransformStamped()
+
+        # Fill in the transform data
+        static_transform.header.stamp = self.get_clock().now().to_msg()
+        static_transform.header.frame_id = "odom"
+        static_transform.child_frame_id = "map"
+
+        self.static_broadcaster.sendTransform(static_transform)
 
     def global_position_local_callback(self, msg: Odometry):
         # TODO: this alt is relative to HOME. get current home alt and republish relative to the EKF_ORIGIN

@@ -2,7 +2,7 @@
     <arg name='result_pdf_name' default='latest'/>
     <include file="$(find-pkg-share mav_drone_localization)/launch/ekf.launch"/>
     <node name="odom_recorder" exec="ekf_test_bench" pkg="mav_drone_localization">
-        <remap from="/odom1" to="/odometry/filtered/global"/>
+        <remap from="/odom1" to="/odometry/filtered"/>
         <remap from="/odom2" to="/odom/base_link"/>
         <remap from="/twist" to="/optical_flow/twist_with_cov"/>
         <param name="result_pdf_name" value="$(var result_pdf_name)"/>
