@@ -64,7 +64,7 @@ def geoid_height(lat, lon):
 ## Altitude
 - after checking, there is a solid value of altitude in the ```GLOBAL_POSITION_INT``` msg. it is in the ```relative altitude``` field.
 - this field is measured with respect to the ```HOME_POSITION```.
-- the strength of the datum in it is from the fact that they have a "fallback" to the barometer altitude if the normal GPS, LLA positioning systems arent working.
+- the strength of the data in it is from the fact that they have a "fallback" to the barometer altitude if the normal GPS, LLA positioning systems aren't working.
 - it was checked by me when flying in ALT_HOLD without any GPS connected.
 - that means: for now in simulation: take this height. later - TODO: substruct the HOME_POSITION altitude from it to get the alt in compare to EKF_ORIGIN.
 

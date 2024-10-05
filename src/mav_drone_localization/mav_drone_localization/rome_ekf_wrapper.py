@@ -129,7 +129,7 @@ class PreEkfTranslator(Node):
     def publish_local_body_tf(self):
         try:
             # Get the original transform
-            trans = self.tf_buffer.lookup_transform(self.get_parameter('map_frame').value, self.get_parameter('base_link_frame').value, rclpy.time.Time())
+            trans = self.tf_buffer.lookup_transform(self.get_parameter('odom_frame').value, self.get_parameter('base_link_frame').value, rclpy.time.Time())
             original_rotation = trans.transform.rotation
             
             # Extract the quaternion from the original transform
@@ -157,7 +157,7 @@ class PreEkfTranslator(Node):
             # Create a new transform
             new_transform = TransformStamped()
             new_transform.header.stamp = self.get_clock().now().to_msg()
-            new_transform.header.frame_id = self.get_parameter('map_frame').value  # Make the original transform the parent
+            new_transform.header.frame_id = self.get_parameter('odom_frame').value  # Make the original transform the parent
             new_transform.child_frame_id = self.get_parameter('base_link_stab_frame').value      # Name for the new frame
 
             # Set the translation (keeping the same position but setting z to 0)
@@ -170,7 +170,6 @@ class PreEkfTranslator(Node):
             new_transform.transform.rotation.z = quat_from_odom[2]
             new_transform.transform.rotation.w = quat_from_odom[3]
 
-            self.get_logger().error(str(new_transform))
             # Publish the new transform
             self.tf_broadcaster.sendTransform(new_transform)
 
