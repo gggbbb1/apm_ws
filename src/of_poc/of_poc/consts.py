@@ -8,6 +8,7 @@ SEGMENT_AMOUNT_WIDTH = 'segment_amount_x'
 SEGMENT_AMOUNT_HEIGHT = 'segment_amount_y'
 MIN_INTERVAL_TO_COMPUTE = 'min_interval_to_compute'
 DEFAULT_VAR_VALUE = 'default_var_value'
+VELOCITY_DEADZONE = 'velocity_deadzone'
 
 # topics
 CAMERA_FLU_ODOM_TOPIC = "/odom/camera_flu"

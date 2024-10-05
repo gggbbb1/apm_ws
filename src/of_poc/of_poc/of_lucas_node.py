@@ -147,7 +147,9 @@ class ImageToOF(Node):
         self.declare_parameter(SEGMENT_AMOUNT_WIDTH, 3)
         self.declare_parameter(SEGMENT_AMOUNT_HEIGHT, 3)
         self.declare_parameter(MIN_INTERVAL_TO_COMPUTE, 0.05)
-        self.declare_parameter(DEFAULT_VAR_VALUE, 0.2)
+        self.declare_parameter(DEFAULT_VAR_VALUE, 0.05)
+        self.declare_parameter(VELOCITY_DEADZONE, 0.05)
+
 
     @rate_checker
     def run(self, odom_msg: Odometry, img_msg: Image) -> None:
@@ -213,15 +215,19 @@ class ImageToOF(Node):
 
         if self.debug_mode:
             if len(new_feature_points_on_the_ground) > 0:
-                self.get_logger().info(
-                    f"Calculated Flow in m/s: {flow_in_m_s}\n Variance x axis: {var_x}\n Variance y axis: {var_y}"
-                )
+                pass
                 # self.get_logger().info(
                 #     f"{float(current_time_not_ros - last_time_not_ros)}"
                 # )
             self.show_lucas(cropped_image, all_frame_good_new, all_frame_good_old, new_feature_points_on_the_ground)
 
         # velocities_in_map = self.transform_flow_to_map_frame(flow_in_m_s)
+        deadzone=self.get_parameter(VELOCITY_DEADZONE).value
+        if abs(flow_in_m_s[0])<deadzone:
+            flow_in_m_s[0] = 0.0
+        if abs(flow_in_m_s[1])<deadzone:
+            flow_in_m_s[1] = 0.0
+
         self.publish_twist_msg(flow_in_m_s[1], flow_in_m_s[0], var_x, var_y)
 
         self.last_run_data = SingleFrameData(this_run_time, cropped_image_gray, odom_msg, current_transform)
@@ -476,6 +482,9 @@ class ImageToOF(Node):
         return
 
     def publish_twist_msg(self, vx, vy, variance_x, variance_y):
+        self.get_logger().info(
+                    f"Calculated Flow in m/s: {vx, vy}\n Variance x axis: {variance_x}\n Variance y axis: {variance_y}"
+                )
         current_time = self.get_clock().now().to_msg()
         msg = TwistStamped()
         msg.header.frame_id = WORLD_FRAME

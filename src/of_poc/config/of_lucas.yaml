@@ -9,3 +9,4 @@
     segment_amount_x: 3
     segment_amount_y: 3
     min_interval_to_compute: 0.001
+    velocity_deadzone: 0.05
