@@ -5,7 +5,8 @@ from rclpy.node import Node
 import rclpy.time
 from std_msgs.msg import String, Float64
 from sensor_msgs.msg import FluidPressure, Temperature, NavSatFix
-from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped, Vector3Stamped
+import tf2_geometry_msgs
 from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.srv import MessageInterval
 # from mavros_msgs.msg import 
@@ -103,11 +104,20 @@ class PreEkfTranslator(Node):
 
     def odom_gz_callback(self, msg: Odometry):
         self.get_logger().info(f'Received from odom')
-        msg.header.frame_id = 'map'
+        msg.header.frame_id = 'odom'
         msg.child_frame_id = 'base_link'
-        std = 0.0
-        msg.pose.pose.position.x = float(msg.pose.pose.position.x + np.random.normal(0, std, 1))
-        msg.pose.covariance[0] = float(msg.pose.covariance[0])
+        try:
+            # Get the original transform
+            trans = self.tf_buffer.lookup_transform('base_link', 'odom', rclpy.time.Time())
+            lin_vel = Vector3Stamped()
+            lin_vel.vector.x = msg.twist.twist.linear.x
+            lin_vel.vector.y = msg.twist.twist.linear.y
+            lin_vel.vector.z = msg.twist.twist.linear.z
+            vec_lin_trans = tf2_geometry_msgs.do_transform_vector3(lin_vel, trans)
+            msg.twist.twist.linear = vec_lin_trans.vector
+            self.get_logger().error(f"{trans, vec_lin_trans.vector}")
+        except:
+            self.get_logger().error("cant_transform")
 
         self.odom_publisher.publish(msg)
 
