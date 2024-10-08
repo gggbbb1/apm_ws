@@ -29,3 +29,6 @@
       - 'local_position'
       - 'global_position'
       - 'altitude'
+      - 'odometry'
+      - 'vision_pose'
+      - 'vision_speed'

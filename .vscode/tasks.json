@@ -47,7 +47,8 @@
                 "apm_bringup",
                 "apm_gazebo",
                 "of_poc",
-                "mav_drone_localization"
+                "mav_drone_localization",
+                "odom_to_ardu"
             ],
             "type": "pickString"
         },

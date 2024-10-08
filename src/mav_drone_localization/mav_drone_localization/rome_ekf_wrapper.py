@@ -96,19 +96,20 @@ class PreEkfTranslator(Node):
         # TODO: this alt is relative to HOME. get current home alt and republish relative to the EKF_ORIGIN
         pose_for_alt = PoseWithCovarianceStamped()
         pose_for_alt.header = msg.header
-        pose_for_alt.header.frame_id = 'map'
+        pose_for_alt.header.frame_id = 'odom'
         pose_for_alt.pose.pose.position.z = msg.pose.pose.position.z
         pose_for_alt.pose.covariance[14] = 1.0
         self.alt_publisher.publish(pose_for_alt)
 
     def odom_gz_callback(self, msg: Odometry):
         self.get_logger().info(f'Received from odom')
-        msg.header.frame_id = 'map'
-        msg.child_frame_id = 'base_link'
+        msg.header.frame_id = 'odom'
+        msg.child_frame_id = 'odom'
         std = 0.0
-        msg.pose.pose.position.x = float(msg.pose.pose.position.x + np.random.normal(0, std, 1))
+        # msg.pose.pose.position.x = float(msg.pose.pose.position.x + np.random.normal(0, std, 1))
         msg.pose.covariance[0] = float(msg.pose.covariance[0])
-
+        msg.twist.covariance[0] = 0.0
+        msg.twist.covariance[7] = 0.0
         self.odom_publisher.publish(msg)
 
     def set_msg_interval_ekf_origin_callback(self):

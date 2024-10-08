@@ -6,7 +6,7 @@
         <param from="$(find-pkg-share mav_drone_localization)/config/ekf_mav_with_gps.yaml"/>
         <remap from="/odometry/filtered" to="/odometry/filtered/local"/>
     </node>
-    <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node_map">
+    <!-- <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node_map">
         <param from="$(find-pkg-share mav_drone_localization)/config/ekf_mav_with_gps.yaml"/>
         <remap from="/odometry/filtered" to="/odometry/filtered/global"/>
     </node>
@@ -16,5 +16,5 @@
         <remap from="/gps/fix" to="/mavros/global_position/raw/fix" />
         <remap from="/odometry/filtered" to="/odometry/filtered/global" /> 
         <remap from="/datum" to="/navsat_transform/set_datum" /> 
-    </node>
+    </node> -->
 </launch>
