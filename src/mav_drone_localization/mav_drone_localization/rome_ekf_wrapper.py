@@ -48,7 +48,7 @@ class PreEkfTranslator(Node):
         self.declare_parameter('temp_cov', 0.2) # deg c*
         self.declare_parameter('heading_cov', 0.02 ) # degrees
         self.declare_parameter('generated_alt_noise_std', 0.0) # in m
-        self.declare_parameter('out_topic', '~/hdg_and_alt')
+        self.declare_parameter('out_topic', '/alt/gazebo')
         self.declare_parameter('out_rate', 10)
         self.declare_parameter('ekf_origin_msg_interval_request_rate', 0.1)
         self.declare_parameter('ekf_origin_msg_rate', 0.1) # HZ
@@ -60,12 +60,12 @@ class PreEkfTranslator(Node):
 
         self.get_logger().warning(f"publishing alt with noise = {self.get_parameter('generated_alt_noise_std').value}")
 
-        self.subscription1 = self.create_subscription(
-            Odometry, 
-            '/mavros/global_position/local',
-            self.global_position_local_callback,
-            qos_profile_sensor_data
-        )
+        # self.subscription1 = self.create_subscription(
+        #     Odometry, 
+        #     '/mavros/global_position/local',
+        #     self.global_position_local_callback,
+        #     qos_profile_sensor_data
+        # )
 
         self.subscription3 = self.create_subscription(
             Odometry,
@@ -129,6 +129,13 @@ class PreEkfTranslator(Node):
             self.get_logger().error("cant_transform")
 
         self.odom_publisher.publish(msg)
+
+        pose_for_alt = PoseWithCovarianceStamped()
+        pose_for_alt.header = msg.header
+        pose_for_alt.header.frame_id = 'map'
+        pose_for_alt.pose.pose.position.z = msg.pose.pose.position.z
+        pose_for_alt.pose.covariance[14] = 0.4
+        self.alt_publisher.publish(pose_for_alt)
 
     def set_msg_interval_ekf_origin_callback(self):
         req = MessageInterval.Request()
@@ -207,8 +214,8 @@ class PreEkfTranslator(Node):
         odom.pose.pose.position.x = enu_coords[0]
         odom.pose.pose.position.y = enu_coords[1]
         odom.pose.pose.position.z = enu_coords[2]
-        odom.pose.covariance[0] = 1.0
-        odom.pose.covariance[7] = 1.0
+        odom.pose.covariance[0] = 0.5
+        odom.pose.covariance[7] = 0.5
         odom.pose.covariance[14] = 1.0
 
         self.gps_publisher.publish(odom)

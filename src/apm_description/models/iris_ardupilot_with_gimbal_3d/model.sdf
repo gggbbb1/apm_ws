@@ -118,7 +118,7 @@
           <namespace>odom</namespace>
           <remapping>odom:=base_link</remapping>
           </ros>
-        <gaussian_noise>0.01</gaussian_noise>
+        <gaussian_noise>0.1</gaussian_noise>
         <update_rate>15</update_rate>
       </plugin>
       <plugin name="pose_3d_plugin_link" filename="libgazebo_ros_p3d.so">
