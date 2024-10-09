@@ -5,7 +5,7 @@ from rclpy.node import Node
 import rclpy.time
 from std_msgs.msg import String, Float64
 from sensor_msgs.msg import FluidPressure, Temperature, NavSatFix
-from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped, Vector3Stamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped, Vector3Stamped, TwistWithCovarianceStamped
 import tf2_geometry_msgs
 from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.srv import MessageInterval
@@ -40,6 +40,8 @@ class PreEkfTranslator(Node):
         self.last_pres_header = None
         self.last_published_header : Header = None
         self.ekf_origin: GeoPointStamped = None
+        self.rate_of_climb : float = 0.0
+
         # Declare parameters for input and output topics
         self.declare_parameter('heading_topic', '/mavros/global_position/compass_hdg')
         self.declare_parameter('pressure_topic', '/mavros/imu/static_pressure')
@@ -67,7 +69,7 @@ class PreEkfTranslator(Node):
         #     qos_profile_sensor_data
         # )
 
-        self.subscription3 = self.create_subscription(
+        self.subscription2 = self.create_subscription(
             Odometry,
             '/odom/base_link',
             self.odom_gz_callback,
@@ -79,11 +81,19 @@ class PreEkfTranslator(Node):
             self.fix_callback,
             qos_profile_sensor_data
         )
+
+        self.subscription4 = self.create_subscription(
+            TwistWithCovarianceStamped,
+            '/optical_flow/twist_with_cov',
+            self.optical_flow_callback,
+            qos_profile_sensor_data
+        )
         self.ekf_origin_sub = self.create_subscription(GeoPointStamped, '/mavros/global_position/gp_origin', self.ekf_origin_callback, qos_profile_sensor_data)
         # Publisher
         self.alt_publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, qos_profile_sensor_data)
         self.odom_publisher = self.create_publisher(Odometry, '/odometry/gazebo', 10)
         self.gps_publisher = self.create_publisher(Odometry, '/odometry/gps', 10)
+        self.velocities_publisher = self.create_publisher(TwistWithCovarianceStamped, '/twist/optical_and_roc', 10)
 
         # Services
         self.msg_interval_client = self.create_client(MessageInterval, '/mavros/set_message_interval')
@@ -112,8 +122,34 @@ class PreEkfTranslator(Node):
         pose_for_alt.pose.covariance[14] = 1.0
         self.alt_publisher.publish(pose_for_alt)
 
+    def optical_flow_callback(self, msg: TwistWithCovarianceStamped):
+        # TODO covariances transform
+        msg.header.frame_id = self.get_parameter('base_link_frame').value
+
+        try:
+            # Get the original transform
+            trans = self.tf_buffer.lookup_transform('base_link', 'odom', rclpy.time.Time())
+            lin_vel = Vector3Stamped()
+            lin_vel.vector.x = msg.twist.twist.linear.x
+            lin_vel.vector.y = msg.twist.twist.linear.y
+            lin_vel.vector.z = self.rate_of_climb
+            vec_lin_trans = tf2_geometry_msgs.do_transform_vector3(lin_vel, trans)
+            msg.twist.twist.linear = vec_lin_trans.vector
+        except:
+            self.get_logger().error("cant_transform")
+
+        twists_variance = 0.5
+        msg.twist.covariance[0] = twists_variance
+        msg.twist.covariance[7] = twists_variance
+        msg.twist.covariance[14] = twists_variance
+
+        self.velocities_publisher.publish(msg)
+
     def odom_gz_callback(self, msg: Odometry):
         self.get_logger().info(f'Received from odom')
+
+        self.rate_of_climb = msg.twist.twist.linear.z
+
         msg.header.frame_id = 'odom'
         msg.child_frame_id = 'base_link'
         try:

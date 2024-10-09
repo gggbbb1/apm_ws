@@ -162,11 +162,11 @@ class OdometryPlotter(Node):
                 self.create_triple_plot(pdf_pages, timestamps1, orientation1, timestamps2, orientation2, 'RPY Orientation', BACKGROUND_POSE)
                     
                 # Plot Velocities X vs. Time
-                self.create_single_plot(pdf_pages, timestamps1, vel1[:, 0], timestamps2, vel2[:, 0], 'Velocity X', 'Velocity (m/s)', BACKGROUND_VEL) # ,twist_np[:,0],time_twist_np 
+                self.create_single_plot(pdf_pages, timestamps1, vel1[:, 0], timestamps2, vel2[:, 0], 'Velocity X', 'Velocity (m/s)', BACKGROUND_VEL ,twist_np[:,0],time_twist_np ) # ,twist_np[:,0],time_twist_np 
 
 
                 # Plot Velocities Y vs. Time
-                self.create_single_plot(pdf_pages, timestamps1, vel1[:, 1], timestamps2, vel2[:, 1], 'Velocity Y', 'Velocity (m/s)', BACKGROUND_VEL) # ,twist_np[:,1],time_twist_np 
+                self.create_single_plot(pdf_pages, timestamps1, vel1[:, 1], timestamps2, vel2[:, 1], 'Velocity Y', 'Velocity (m/s)', BACKGROUND_VEL, twist_np[:,1],time_twist_np ) # ,twist_np[:,1],time_twist_np 
 
 
                 # Plot Velocities Z vs. Time
