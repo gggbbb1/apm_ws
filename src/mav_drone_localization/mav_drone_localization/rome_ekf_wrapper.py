@@ -21,6 +21,11 @@ import tf2_ros
 from scipy.spatial.transform import Rotation as R
 
 #region Consts
+# Define WGS84 ellipsoid constants
+a = 6378137.0           # Earth's semi-major axis in meters
+f = 1 / 298.257223563    # Flattening
+b = a * (1 - f)         # Semi-minor axis
+
 ORIGIN_ALT_MSL=616.56
 #endregion Consts
 
@@ -68,12 +73,17 @@ class PreEkfTranslator(Node):
             self.odom_gz_callback,
             10
         )
-
+        self.subscription3 = self.create_subscription(
+            NavSatFix,
+            '/mavros/global_position/raw/fix',
+            self.fix_callback,
+            qos_profile_sensor_data
+        )
         self.ekf_origin_sub = self.create_subscription(GeoPointStamped, '/mavros/global_position/gp_origin', self.ekf_origin_callback, qos_profile_sensor_data)
         # Publisher
         self.alt_publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, qos_profile_sensor_data)
         self.odom_publisher = self.create_publisher(Odometry, '/odometry/gazebo', 10)
-        self.gps_publisher = self.create_publisher(NavSatFix, '/gps/fix', qos_profile_sensor_data)
+        self.gps_publisher = self.create_publisher(Odometry, '/odometry/gps', 10)
 
         # Services
         self.msg_interval_client = self.create_client(MessageInterval, '/mavros/set_message_interval')
@@ -115,7 +125,6 @@ class PreEkfTranslator(Node):
             lin_vel.vector.z = msg.twist.twist.linear.z
             vec_lin_trans = tf2_geometry_msgs.do_transform_vector3(lin_vel, trans)
             msg.twist.twist.linear = vec_lin_trans.vector
-            self.get_logger().error(f"{trans, vec_lin_trans.vector}")
         except:
             self.get_logger().error("cant_transform")
 
@@ -129,11 +138,9 @@ class PreEkfTranslator(Node):
         return
 
     def ekf_origin_callback(self, msg: GeoPointStamped):
-        self.get_logger().error(f"datum - {msg}")
         req = SetDatum.Request()
         req.geo_pose.position = msg.position
         self.set_datum_client.call_async(req)
-        self.get_logger().error("end call")
         self.ekf_origin = msg
 
     def publish_local_body_tf(self):
@@ -185,6 +192,74 @@ class PreEkfTranslator(Node):
 
         except Exception as e:
             self.get_logger().error(f"Could not get transform: {e}")
+
+    def fix_callback(self, msg: NavSatFix):
+        if self.ekf_origin is None:
+            return
+        lat, lon, alt = msg.latitude, msg.longitude, msg.altitude
+        lat0, lon0, alt0 = self.ekf_origin.position.latitude, self.ekf_origin.position.longitude, self.ekf_origin.position.altitude
+        enu_coords = self.latlonalt_to_enu(lat, lon, alt, lat0, lon0, alt0)
+        self.get_logger().warn(f"{enu_coords}")
+        odom = Odometry()
+        odom.header.stamp = msg.header.stamp
+        odom.header.frame_id = self.get_parameter('map_frame').value
+
+        odom.pose.pose.position.x = enu_coords[0]
+        odom.pose.pose.position.y = enu_coords[1]
+        odom.pose.pose.position.z = enu_coords[2]
+        odom.pose.covariance[0] = 1.0
+        odom.pose.covariance[7] = 1.0
+        odom.pose.covariance[14] = 1.0
+
+        self.gps_publisher.publish(odom)
+
+
+
+    def geodetic_to_ecef(self, lat, lon, alt):
+        """Convert geodetic coordinates (lat, lon, alt) to ECEF coordinates (x, y, z)."""
+        lat, lon = np.radians(lat), np.radians(lon)
+        
+        # Prime vertical radius of curvature
+        N = a / np.sqrt(1 - (2*f - f**2) * np.sin(lat)**2)
+        
+        # ECEF coordinates
+        x = (N + alt) * np.cos(lat) * np.cos(lon)
+        y = (N + alt) * np.cos(lat) * np.sin(lon)
+        z = (N * (1 - (2*f - f**2)) + alt) * np.sin(lat)
+        
+        return x, y, z
+
+    def ecef_to_enu(self, x, y, z, x0, y0, z0, lat0, lon0):
+        """Convert ECEF coordinates to ENU coordinates relative to a given origin (lat0, lon0, alt0)."""
+        lat0, lon0 = np.radians(lat0), np.radians(lon0)
+        
+        # Differences between the point and the origin
+        dx = x - x0
+        dy = y - y0
+        dz = z - z0
+        
+        # ENU transformation matrix
+        t = np.array([
+            [-np.sin(lon0), np.cos(lon0), 0],
+            [-np.sin(lat0)*np.cos(lon0), -np.sin(lat0)*np.sin(lon0), np.cos(lat0)],
+            [np.cos(lat0)*np.cos(lon0), np.cos(lat0)*np.sin(lon0), np.sin(lat0)]
+        ])
+        
+        # Apply transformation
+        enu = t @ np.array([dx, dy, dz])
+        
+        return enu
+
+    def latlonalt_to_enu(self, lat, lon, alt, lat0, lon0, alt0):
+        """Convert lat, lon, alt to ENU coordinates with respect to an origin point."""
+        # Convert both origin and point coordinates to ECEF
+        x0, y0, z0 = self.geodetic_to_ecef(lat0, lon0, alt0)
+        x, y, z = self.geodetic_to_ecef(lat, lon, alt)
+        
+        # Convert ECEF to ENU
+        enu = self.ecef_to_enu(x, y, z, x0, y0, z0, lat0, lon0)
+        
+        return enu
 
 def main(args=None):
     rclpy.init(args=args)

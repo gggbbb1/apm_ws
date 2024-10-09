@@ -21,6 +21,7 @@ RUN apt-get update \
       ros-humble-robot-localization \
       ros-humble-mavros \
       ros-humble-mavros-extras \
+      ros-humble-rqt-runtime-monitor \
    && apt-get autoremove -y \
    && apt-get clean -y \
    && rm -rf /var/lib/apt/lists/*
