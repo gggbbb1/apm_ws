@@ -146,6 +146,13 @@
 # debug_value
 # None
 
+# ahrs2
+/mavros/**/ahrs2:
+  ros__parameters:
+    tf.frame_id: "sea_level"
+    alt_stdev: 0.5
+
+
 # distance_sensor
 ## Currently available orientations:
 #    Check http://wiki.ros.org/mavros/**/Enumerations

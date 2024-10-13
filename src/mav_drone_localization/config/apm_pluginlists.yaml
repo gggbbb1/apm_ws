@@ -28,4 +28,4 @@
       - 'vfr_hud'
       - 'local_position'
       - 'global_position'
-      - 'altitude'
+      - 'ahrs2'
