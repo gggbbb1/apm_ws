@@ -18,9 +18,9 @@ RUN apt-get update \
       ros-humble-rqt \
       ros-humble-rqt-common-plugins \
       ros-humble-rqt-tf-tree \
-      ros-humble-robot-localization \
+      # ros-humble-robot-localization \ # started using a local version of this
       ros-humble-mavros \
-      ros-humble-mavros-extras \
+      # ros-humble-mavros-extras \ # started using a local version of this
       ros-humble-rqt-runtime-monitor \
    && apt-get autoremove -y \
    && apt-get clean -y \

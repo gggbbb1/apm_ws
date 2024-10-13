@@ -11,7 +11,7 @@
                     "color": "#d66722"
                 },
             },
-            "command": "colcon build --symlink-install --merge-install --packages-select ${input:package_name}",
+            "command": "colcon build --symlink-install --packages-select ${input:package_name}",
             "problemMatcher": []
         },
         {
@@ -48,7 +48,8 @@
                 "apm_gazebo",
                 "of_poc",
                 "mav_drone_localization",
-                "mavros_extras"
+                "mavros_extras",
+                "robot_localization"
             ],
             "type": "pickString"
         },
