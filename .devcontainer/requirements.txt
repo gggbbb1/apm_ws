@@ -3,3 +3,4 @@ transform3d
 numpy<2.0.0
 matplotlib
 transforms3d
+pygeodesy

@@ -32,7 +32,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "command": "colcon build --symlink-install --merge-install",
+            "command": "colcon build --symlink-install",
             "problemMatcher": []
         }
     ],
@@ -47,7 +47,8 @@
                 "apm_bringup",
                 "apm_gazebo",
                 "of_poc",
-                "mav_drone_localization"
+                "mav_drone_localization",
+                "mavros_extras"
             ],
             "type": "pickString"
         },
