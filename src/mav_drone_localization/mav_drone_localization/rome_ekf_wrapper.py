@@ -70,13 +70,6 @@ class PreEkfTranslator(Node):
         self.rate_of_climb : float = 0.0
 
         # Declare parameters for input and output topics
-        self.declare_parameter('heading_topic', '/mavros/global_position/compass_hdg')
-        self.declare_parameter('pressure_topic', '/mavros/imu/static_pressure')
-        self.declare_parameter('temp_topic', '/mavros/imu/temperature_baro')
-        self.declare_parameter('pressure_cov', 10.0 ) # pascals
-        self.declare_parameter('temp_cov', 0.2) # deg c*
-        self.declare_parameter('heading_cov', 0.02 ) # degrees
-        self.declare_parameter('generated_alt_noise_std', 0.0) # in m
         self.declare_parameter('out_topic', '/alt/ahrs2')
         self.declare_parameter('out_rate', 10)
         self.declare_parameter('ekf_origin_msg_interval_request_rate', 0.1)
@@ -87,7 +80,6 @@ class PreEkfTranslator(Node):
         self.declare_parameter('base_link_stab_frame', 'base_link_stab')
 
 
-        self.get_logger().warning(f"publishing alt with noise = {self.get_parameter('generated_alt_noise_std').value}")
 
         self.subscription1 = self.create_subscription(
             PoseWithCovarianceStamped, 
@@ -127,7 +119,6 @@ class PreEkfTranslator(Node):
         self.set_datum_client = self.create_client(SetDatum, '/navsat_transform/set_datum')
 
         # Timer to operate:
-        # self.out_timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.process_and_republish)
         self.ekf_origin_set_msg_interval_timer = self.create_timer(self.get_parameter('ekf_origin_msg_interval_request_rate').value, self.set_msg_interval_ekf_origin_callback)
 
         # TFs
@@ -261,7 +252,7 @@ class PreEkfTranslator(Node):
         lat, lon, alt = msg.latitude, msg.longitude, msg.altitude
         lat0, lon0, alt0 = self.ekf_origin.position.latitude, self.ekf_origin.position.longitude, self.ekf_origin.position.altitude
         enu_coords = self.latlonalt_to_enu(lat, lon, alt, lat0, lon0, alt0)
-        self.get_logger().warn(f"{enu_coords}")
+
         odom = Odometry()
         odom.header.stamp = msg.header.stamp
         odom.header.frame_id = self.get_parameter('map_frame').value
