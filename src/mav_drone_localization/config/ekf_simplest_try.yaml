@@ -42,7 +42,7 @@ ekf_filter_node_odom:
         permit_corrected_publication: false
 
         # Whether to publish the acceleration state. Defaults to false if unspecified.
-        publish_acceleration: false
+        publish_acceleration: true
 
         # Whether to broadcast the transformation over the /tf topic. Defaults to true if unspecified.
         publish_tf: true
@@ -404,7 +404,7 @@ ekf_filter_node_map:
         # odom1_pose_rejection_threshold: 2.0
         # odom1_twist_rejection_threshold: 0.2
 
-        pose0: /alt/gazebo
+        pose0: /alt/ahrs2
         pose0_config: [false,  false, true,
                        false, false, false,
                        false, false, false,
