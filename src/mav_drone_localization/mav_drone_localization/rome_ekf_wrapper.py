@@ -29,10 +29,37 @@ b = a * (1 - f)         # Semi-minor axis
 ORIGIN_ALT_MSL=616.56
 #endregion Consts
 
+from pygeodesy.geoids import GeoidPGM
+
+
+class EllipsoidHandler:
+    def __init__(self):
+        self._egm96 = GeoidPGM('/usr/share/GeographicLib/geoids/egm96-5.pgm', kind=-3)
+
+    def geoid_height(self, lat, lon):
+        """Calculates AMSL to ellipsoid conversion offset.
+        Uses EGM96 data with 5' grid and cubic interpolation.
+        The value returned can help you convert from meters 
+        above mean sea level (AMSL) to meters above
+        the WGS84 ellipsoid.
+
+        If you want to go from AMSL to ellipsoid height, add the value.
+
+        To go from ellipsoid height to AMSL, subtract this value.
+        """
+        return self._egm96.height(lat, lon)
+
+
+    def geopoint_ellipsoid_to_amsl(self, geo: GeoPointStamped):
+        geo_amsl = GeoPointStamped
+        geo_amsl = geo
+        geo_amsl.position.altitude = geo.position.altitude - self.geoid_height(geo.position.latitude, geo.position.longitude)
+        return geo_amsl
+    
 class PreEkfTranslator(Node):
     def __init__(self):
         super().__init__('rome_ekf_wrapper')
-
+        self.ellipsoid_handler = EllipsoidHandler()
         # last_assigned values:
         self.last_heading = 0.0
         self.last_pressure = None
@@ -50,7 +77,7 @@ class PreEkfTranslator(Node):
         self.declare_parameter('temp_cov', 0.2) # deg c*
         self.declare_parameter('heading_cov', 0.02 ) # degrees
         self.declare_parameter('generated_alt_noise_std', 0.0) # in m
-        self.declare_parameter('out_topic', '/alt/gazebo')
+        self.declare_parameter('out_topic', '/alt/ahrs2')
         self.declare_parameter('out_rate', 10)
         self.declare_parameter('ekf_origin_msg_interval_request_rate', 0.1)
         self.declare_parameter('ekf_origin_msg_rate', 0.1) # HZ
@@ -62,12 +89,12 @@ class PreEkfTranslator(Node):
 
         self.get_logger().warning(f"publishing alt with noise = {self.get_parameter('generated_alt_noise_std').value}")
 
-        # self.subscription1 = self.create_subscription(
-        #     Odometry, 
-        #     '/mavros/global_position/local',
-        #     self.global_position_local_callback,
-        #     qos_profile_sensor_data
-        # )
+        self.subscription1 = self.create_subscription(
+            PoseWithCovarianceStamped, 
+            '/mavros/ahrs2/alt',
+            self.ahrs2_callback,
+            10
+        )
 
         self.subscription2 = self.create_subscription(
             Odometry,
@@ -90,7 +117,7 @@ class PreEkfTranslator(Node):
         )
         self.ekf_origin_sub = self.create_subscription(GeoPointStamped, '/mavros/global_position/gp_origin', self.ekf_origin_callback, qos_profile_sensor_data)
         # Publisher
-        self.alt_publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, qos_profile_sensor_data)
+        self.alt_publisher = self.create_publisher(PoseWithCovarianceStamped, self.get_parameter('out_topic').value, 10)
         self.odom_publisher = self.create_publisher(Odometry, '/odometry/gazebo', 10)
         self.gps_publisher = self.create_publisher(Odometry, '/odometry/gps', 10)
         self.velocities_publisher = self.create_publisher(TwistWithCovarianceStamped, '/twist/optical_and_roc', 10)
@@ -113,14 +140,13 @@ class PreEkfTranslator(Node):
         # Timer to publish the new TF
         self.timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.publish_local_body_tf)
 
-    def global_position_local_callback(self, msg: Odometry):
-        # TODO: this alt is relative to HOME. get current home alt and republish relative to the EKF_ORIGIN
-        pose_for_alt = PoseWithCovarianceStamped()
-        pose_for_alt.header = msg.header
-        pose_for_alt.header.frame_id = 'map'
-        pose_for_alt.pose.pose.position.z = msg.pose.pose.position.z
-        pose_for_alt.pose.covariance[14] = 1.0
-        self.alt_publisher.publish(pose_for_alt)
+    def ahrs2_callback(self, msg: PoseWithCovarianceStamped):
+        if self.ekf_origin is None:
+            return 
+        # AHRS2 is alt is relative to AMSL. republish relative to the EKF_ORIGIN
+        msg.header.frame_id = self.get_parameter("map_frame").value
+        msg.pose.pose.position.z = msg.pose.pose.position.z - self.ekf_origin.position.altitude
+        self.alt_publisher.publish(msg)
 
     def optical_flow_callback(self, msg: TwistWithCovarianceStamped):
         # TODO covariances transform
@@ -150,11 +176,11 @@ class PreEkfTranslator(Node):
 
         self.rate_of_climb = msg.twist.twist.linear.z
 
-        msg.header.frame_id = 'odom'
+        msg.header.frame_id = 'map'
         msg.child_frame_id = 'base_link'
         try:
             # Get the original transform
-            trans = self.tf_buffer.lookup_transform('base_link', 'odom', rclpy.time.Time())
+            trans = self.tf_buffer.lookup_transform('base_link', 'map', rclpy.time.Time())
             lin_vel = Vector3Stamped()
             lin_vel.vector.x = msg.twist.twist.linear.x
             lin_vel.vector.y = msg.twist.twist.linear.y
@@ -165,13 +191,6 @@ class PreEkfTranslator(Node):
             self.get_logger().error("cant_transform")
 
         self.odom_publisher.publish(msg)
-
-        pose_for_alt = PoseWithCovarianceStamped()
-        pose_for_alt.header = msg.header
-        pose_for_alt.header.frame_id = 'map'
-        pose_for_alt.pose.pose.position.z = msg.pose.pose.position.z
-        pose_for_alt.pose.covariance[14] = 0.4
-        self.alt_publisher.publish(pose_for_alt)
 
     def set_msg_interval_ekf_origin_callback(self):
         req = MessageInterval.Request()
@@ -184,7 +203,7 @@ class PreEkfTranslator(Node):
         req = SetDatum.Request()
         req.geo_pose.position = msg.position
         self.set_datum_client.call_async(req)
-        self.ekf_origin = msg
+        self.ekf_origin = self.ellipsoid_handler.geopoint_ellipsoid_to_amsl(msg)
 
     def publish_local_body_tf(self):
         try:
@@ -254,7 +273,7 @@ class PreEkfTranslator(Node):
         odom.pose.covariance[7] = 0.5
         odom.pose.covariance[14] = 1.0
 
-        self.gps_publisher.publish(odom)
+        # self.gps_publisher.publish(odom)
 
 
 
