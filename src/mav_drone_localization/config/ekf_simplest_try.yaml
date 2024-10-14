@@ -36,7 +36,7 @@ ekf_filter_node_odom:
         debug: false
 
         # Defaults to "robot_localization_debug.txt" if unspecified. Please specify the full path.
-        debug_out_file: /path/to/debug/file.txt
+        debug_out_file: /workspaces/apm_24_9/logs/ekf_odom.txt
 
         # Whether we'll allow old measurements to cause a re-publication of the updated state
         permit_corrected_publication: false
@@ -70,6 +70,7 @@ ekf_filter_node_odom:
         odom_frame: odom            # Defaults to "odom" if unspecified
         base_link_frame: base_link  # Defaults to "base_link" if unspecified
         world_frame: odom           # Defaults to the value of odom_frame if unspecified
+        base_link_stab_frame: base_link_stab    # Defaults to the value of "base_link_stab" if unspecified
 
         # The filter accepts an arbitrary number of inputs from each input message type (nav_msgs/Odometry,
         # geometry_msgs/PoseWithCovarianceStamped, geometry_msgs/TwistWithCovarianceStamped,
@@ -296,7 +297,7 @@ ekf_filter_node_map:
         # Debug settings. Not for the faint of heart. Outputs a ludicrous amount of information to the file specified by
         # debug_out_file. I hope you like matrices! Please note that setting this to true will have strongly deleterious
         # effects on the performance of the node. Defaults to false if unspecified.
-        debug: true
+        debug: false
 
         # Defaults to "robot_localization_debug.txt" if unspecified. Please specify the full path.
         debug_out_file: /workspaces/apm_24_9/logs/ekf_map.txt

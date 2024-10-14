@@ -42,6 +42,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/LinearMath/Quaternion.h>
 
 #include <algorithm>
 #include <iostream>
@@ -776,6 +778,9 @@ void RosFilter<T>::loadParams()
   base_link_output_frame_id_ = this->declare_parameter(
     "base_link_frame_output",
     base_link_frame_id_);
+  base_link_stab_frame_id_ = this->declare_parameter(
+    "base_link_stab_frame",
+    std::string("base_link_stab"));
 
   /*
    * These parameters are designed to enforce compliance with REP-105:
@@ -826,6 +831,7 @@ void RosFilter<T>::loadParams()
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, odom_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, base_link_frame_id_);
+    filter_utilities::appendPrefix(tf_prefix, base_link_stab_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, base_link_output_frame_id_);
     filter_utilities::appendPrefix(tf_prefix, world_frame_id_);
   }
@@ -1008,6 +1014,7 @@ void RosFilter<T>::loadParams()
       "\nmap_frame is " << map_frame_id_ <<
       "\nodom_frame is " << odom_frame_id_ <<
       "\nbase_link_frame is " << base_link_frame_id_ <<
+      "\nbase_link_stab_frame is " << base_link_stab_frame_id_ <<
       "\nbase_link_output_frame is " << base_link_output_frame_id_ <<
       "\nworld_frame is " << world_frame_id_ <<
       "\ntransform_time_offset is " << filter_utilities::toSec(tf_time_offset_) <<
@@ -1972,6 +1979,9 @@ void RosFilter<T>::initialize()
   world_base_link_trans_msg_.transform =
     tf2::toMsg(tf2::Transform::getIdentity());
 
+  odom_base_link_stab_trans_msg_.transform =
+    tf2::toMsg(tf2::Transform::getIdentity());
+
   // Position publisher
   rclcpp::PublisherOptions publisher_options;
   publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
@@ -2042,6 +2052,21 @@ void RosFilter<T>::periodicUpdate()
     world_base_link_trans_msg_.transform.rotation =
       filtered_position->pose.pose.orientation;
 
+    if (filtered_position->header.frame_id == odom_frame_id_){
+      tf2::Quaternion quat_tf;
+      geometry_msgs::msg::Quaternion quat_msg;
+      double yaw = 0;
+
+      tf2::fromMsg(world_base_link_trans_msg_.transform.rotation, quat_tf);
+      yaw = ros_filter_utilities::getYaw(quat_tf);
+      quat_tf.setRPY( 0, 0, yaw);
+      quat_msg = tf2::toMsg(quat_tf);
+
+      odom_base_link_stab_trans_msg_ = world_base_link_trans_msg_;
+      odom_base_link_stab_trans_msg_.transform.rotation = quat_msg;
+      this->get_parameter("base_link_stab_frame", base_link_stab_frame_id_);
+      odom_base_link_stab_trans_msg_.child_frame_id = base_link_stab_frame_id_;
+    }
     // The filtered_position is the message containing the state and covariances:
     // nav_msgs Odometry
     if (!validateFilterOutput(filtered_position.get())) {
@@ -2067,6 +2092,7 @@ void RosFilter<T>::periodicUpdate()
     if (publish_transform_ && !corrected_data) {
       if (filtered_position->header.frame_id == odom_frame_id_) {
         world_transform_broadcaster_->sendTransform(world_base_link_trans_msg_);
+        world_transform_broadcaster_->sendTransform(odom_base_link_stab_trans_msg_);
       } else if (filtered_position->header.frame_id == map_frame_id_) {
         try {
           tf2::Transform world_base_link_trans;

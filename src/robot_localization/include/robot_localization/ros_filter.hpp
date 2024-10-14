@@ -559,6 +559,10 @@ protected:
 
   //! @brief tf frame name for the robot's body frame
   //!
+  std::string base_link_stab_frame_id_;
+
+  //! @brief tf frame name for the robot's body frame
+  //!
   //! When the final state is computed, we "override" the output transform and
   //! message to have this frame for its child_frame_id. This helps to enable
   //! disconnected TF trees when multiple EKF instances are being run.
@@ -594,6 +598,13 @@ protected:
   //!
   geometry_msgs::msg::TransformStamped world_base_link_trans_msg_;
 
+
+  //! @brief Message that contains our latest transform for the stabilized frame (i.e., state)
+  //!
+  //!
+  geometry_msgs::msg::TransformStamped odom_base_link_stab_trans_msg_;
+
+  
   //! @brief last call of periodicUpdate
   //!
   rclcpp::Time last_diag_time_;

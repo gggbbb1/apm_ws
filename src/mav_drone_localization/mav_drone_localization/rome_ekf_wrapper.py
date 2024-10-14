@@ -129,7 +129,6 @@ class PreEkfTranslator(Node):
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
         # Timer to publish the new TF
-        self.timer = self.create_timer(float(1/self.get_parameter('out_rate').value), self.publish_local_body_tf)
 
     def ahrs2_callback(self, msg: PoseWithCovarianceStamped):
         if self.ekf_origin is None:
@@ -195,56 +194,6 @@ class PreEkfTranslator(Node):
         req.geo_pose.position = msg.position
         self.set_datum_client.call_async(req)
         self.ekf_origin = self.ellipsoid_handler.geopoint_ellipsoid_to_amsl(msg)
-
-    def publish_local_body_tf(self):
-        try:
-            # Get the original transform
-            trans = self.tf_buffer.lookup_transform(self.get_parameter('odom_frame').value, self.get_parameter('base_link_frame').value, rclpy.time.Time())
-            original_rotation = trans.transform.rotation
-            
-            # Extract the quaternion from the original transform
-            original_quat = [
-                original_rotation.x,
-                original_rotation.y,
-                original_rotation.z,
-                original_rotation.w
-            ]
-
-            # Convert the quaternion to Euler angles
-            original_rotation = R.from_quat(original_quat)
-            euler = original_rotation.as_euler('xyz')
-
-            # Extract the yaw
-            roll, pitch, yaw = euler
-
-            # Create a new quaternion with the same yaw but zero roll and pitch
-            new_rotation_from_odom = R.from_euler('xyz', [0, 0, yaw])
-            quat_from_odom = new_rotation_from_odom.as_quat()
-            rotation_diff =  original_rotation * new_rotation_from_odom.inv()
-
-            new_quat = rotation_diff.as_quat()
-
-            # Create a new transform
-            new_transform = TransformStamped()
-            new_transform.header.stamp = self.get_clock().now().to_msg()
-            new_transform.header.frame_id = self.get_parameter('odom_frame').value  # Make the original transform the parent
-            new_transform.child_frame_id = self.get_parameter('base_link_stab_frame').value      # Name for the new frame
-
-            # Set the translation (keeping the same position but setting z to 0)
-            new_transform.transform.translation = trans.transform.translation      # Adjust as needed
-
-            
-            # Set the rotation to the new quaternion
-            new_transform.transform.rotation.x = quat_from_odom[0]
-            new_transform.transform.rotation.y = quat_from_odom[1]
-            new_transform.transform.rotation.z = quat_from_odom[2]
-            new_transform.transform.rotation.w = quat_from_odom[3]
-
-            # Publish the new transform
-            self.tf_broadcaster.sendTransform(new_transform)
-
-        except Exception as e:
-            self.get_logger().error(f"Could not get transform: {e}")
 
     def fix_callback(self, msg: NavSatFix):
         if self.ekf_origin is None:
